@@ -264,8 +264,50 @@
                         Gunakan *slider* berikut untuk memindahkan, membesarkan, atau memposisikan komponen kartu pelajar agar pas dengan contoh asli Anda secara visual.
                     </div>
 
-                    <!-- Dimensi Foto Siswa -->
+                    <!-- Dimensi & Posisi Header & Logo (TAMBAHAN REVISI) -->
                     <div class="space-y-3">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b pb-1">
+                            <i class="fa-solid fa-heading"></i> Dimensi Header & Logo Sekolah
+                        </h4>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Tinggi Background Header</span>
+                                <span id="val-headerHeight" class="font-bold text-blue-600">180px</span>
+                            </div>
+                            <input type="range" id="slide-headerHeight" min="140" max="230" step="1" oninput="updateSliderState(this, 'headerHeight')" class="w-full accent-blue-600">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Jarak Atas Konten Header (Padding)</span>
+                                <span id="val-headerTop" class="font-bold text-blue-600">20px</span>
+                            </div>
+                            <input type="range" id="slide-headerTop" min="5" max="45" step="1" oninput="updateSliderState(this, 'headerTop')" class="w-full accent-blue-600">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Ukuran Logo (Diameter)</span>
+                                <span id="val-logoSize" class="font-bold text-blue-600">40px</span>
+                            </div>
+                            <input type="range" id="slide-logoSize" min="25" max="65" step="1" oninput="updateSliderState(this, 'logoSize')" class="w-full accent-blue-600">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Geser Vertikal Logo (Y)</span>
+                                <span id="val-logoTop" class="font-bold text-blue-600">0px</span>
+                            </div>
+                            <input type="range" id="slide-logoTop" min="-20" max="20" step="1" oninput="updateSliderState(this, 'logoTop')" class="w-full accent-blue-600">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Geser Horizontal Logo (X)</span>
+                                <span id="val-logoLeft" class="font-bold text-blue-600">0px</span>
+                            </div>
+                            <input type="range" id="slide-logoLeft" min="-20" max="20" step="1" oninput="updateSliderState(this, 'logoLeft')" class="w-full accent-blue-600">
+                        </div>
+                    </div>
+
+                    <!-- Dimensi Foto Siswa -->
+                    <div class="space-y-3 pt-2">
                         <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b pb-1">
                             <i class="fa-solid fa-image"></i> Dimensi & Posisi Foto Siswa
                         </h4>
@@ -391,7 +433,7 @@
                     <div id="card-container" class="relative overflow-hidden bg-white flex flex-col select-none">
                         
                         <!-- Header Background & Wavy Wave (Pola Diagonal & Lengkung Kubik Halus Dinamis) -->
-                        <div class="absolute top-0 left-0 w-full h-[180px] z-0 overflow-hidden">
+                        <div id="header-bg-container" class="absolute top-0 left-0 w-full h-[180px] z-0 overflow-hidden">
                             <svg class="absolute top-0 left-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 330 180">
                                 <!-- Base Dark Navy -->
                                 <rect id="svg-base-color" width="330" height="180" fill="#153b75" />
@@ -412,7 +454,7 @@
                         </div>
 
                         <!-- Konten Header (Logo & Sekolah) -->
-                        <div class="relative z-10 flex px-4.5 pt-5 pb-2 text-white items-center">
+                        <div id="header-content" class="relative z-10 flex px-4.5 pt-5 pb-2 text-white items-center">
                             <div class="mr-2.5 shrink-0 flex items-center justify-center">
                                 <div id="logo-container" class="w-10 h-10 object-contain rounded-full border border-white/40 bg-white/10 flex items-center justify-center overflow-hidden">
                                     <img id="card-logo" src="" alt="Logo" class="w-full h-full object-contain hidden" crossOrigin="anonymous">
@@ -530,8 +572,8 @@
             birthDate: '06 Agustus 2012',
             contactNumber: '082245439915',
             contactEmail: 'smpkwijana@gmail.com',
-            photoUrl: '', // Kosong agar menggunakan default vector
-            logoUrl: '', // Kosong agar menggunakan default vector
+            photoUrl: '', 
+            logoUrl: '', 
             
             // Konfigurasi Warna
             colorPrimary: '#153b75',
@@ -543,7 +585,12 @@
             // Preset Lengkungan Gelombang
             wavePreset: 'dome',
 
-            // Konfigurasi Sliders Presisi
+            // Konfigurasi Sliders Presisi (Diperluas untuk Header & Logo)
+            headerHeight: 180,
+            headerTop: 20,
+            logoSize: 40,
+            logoTop: 0,
+            logoLeft: 0,
             photoWidth: 105,
             photoHeight: 135,
             photoTop: 14,
@@ -611,6 +658,7 @@
 
             // Sinkronisasi Sliders & Teks Nilainya
             const sliders = [
+                'headerHeight', 'headerTop', 'logoSize', 'logoTop', 'logoLeft',
                 'photoWidth', 'photoHeight', 'photoTop', 
                 'badgeWidth', 'badgeHeight', 'badgeBottom', 
                 'fontName', 'fontId', 'fontBirth', 
@@ -626,7 +674,7 @@
                 if (valueText) {
                     valueText.innerText = key.includes('Width') || key.includes('Height') || key.includes('Top') || key.includes('Bottom') || key.includes('Size') 
                         ? (key === 'badgeWidth' ? `${appState[key]}%` : `${appState[key]}px`)
-                        : (key.includes('font') ? `${appState[key]}px` : appState[key]);
+                        : (key.includes('font') || key.includes('logo') || key.includes('header') ? `${appState[key]}px` : appState[key]);
                 }
             });
 
@@ -661,7 +709,7 @@
             if (valueText) {
                 valueText.innerText = stateKey.includes('Width') || stateKey.includes('Height') || stateKey.includes('Top') || stateKey.includes('Bottom') || stateKey.includes('Size')
                     ? (stateKey === 'badgeWidth' ? `${val}%` : `${val}px`)
-                    : (stateKey.startsWith('font') ? `${val}px` : val);
+                    : (stateKey.startsWith('font') || stateKey.startsWith('logo') || stateKey.startsWith('header') ? `${val}px` : val);
             }
             updateCardUI();
         }
@@ -679,6 +727,11 @@
 
         // Reset Sliders Presisi Ke Posisi Ideal
         function resetSliders() {
+            appState.headerHeight = defaultState.headerHeight;
+            appState.headerTop = defaultState.headerTop;
+            appState.logoSize = defaultState.logoSize;
+            appState.logoTop = defaultState.logoTop;
+            appState.logoLeft = defaultState.logoLeft;
             appState.photoWidth = defaultState.photoWidth;
             appState.photoHeight = defaultState.photoHeight;
             appState.photoTop = defaultState.photoTop;
@@ -748,6 +801,25 @@
             document.getElementById('card-contactSchoolName').innerText = appState.schoolName;
             document.getElementById('card-contactNumber').innerText = appState.contactNumber;
             document.getElementById('card-contactEmail').innerText = appState.contactEmail;
+
+            // Kustomisasi Tinggi Background Header & Padding Atas Konten (TAMBAHAN REVISI)
+            const headerBgContainer = document.getElementById('header-bg-container');
+            if (headerBgContainer) {
+                headerBgContainer.style.height = `${appState.headerHeight}px`;
+            }
+            const headerContent = document.getElementById('header-content');
+            if (headerContent) {
+                headerContent.style.paddingTop = `${appState.headerTop}px`;
+            }
+
+            // Kustomisasi Ukuran & Posisi Logo (TAMBAHAN REVISI)
+            const logoContainer = document.getElementById('logo-container');
+            if (logoContainer) {
+                logoContainer.style.width = `${appState.logoSize}px`;
+                logoContainer.style.height = `${appState.logoSize}px`;
+                logoContainer.style.marginTop = `${appState.logoTop}px`;
+                logoContainer.style.marginLeft = `${appState.logoLeft}px`;
+            }
 
             // Pita Orange NISN & Gaya Presisinya
             const orangeBadge = document.getElementById('orange-badge');
