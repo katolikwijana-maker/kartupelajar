@@ -104,6 +104,9 @@
                     <button onclick="switchTab('data')" id="tab-btn-data" class="text-sm font-bold pb-2 border-b-2 border-blue-600 text-blue-600 px-1 transition-all">
                         <i class="fa-solid fa-database mr-1.5"></i> Data Siswa
                     </button>
+                    <button onclick="switchTab('bulk')" id="tab-btn-bulk" class="text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 px-1 transition-all">
+                        <i class="fa-solid fa-users mr-1.5"></i> Bulk Siswa
+                    </button>
                     <button onclick="switchTab('desain')" id="tab-btn-desain" class="text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 px-1 transition-all">
                         <i class="fa-solid fa-palette mr-1.5"></i> Desain & Warna
                     </button>
@@ -142,10 +145,13 @@
 
                     <!-- Data Diri Siswa -->
                     <div class="space-y-4 pt-2">
-                        <h3 class="text-xs font-extrabold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                            <i class="fa-solid fa-user-graduate text-slate-500"></i>
-                            Informasi Siswa
-                        </h3>
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="text-xs font-extrabold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                <i class="fa-solid fa-user-graduate text-slate-500"></i>
+                                Informasi Siswa Aktif
+                            </h3>
+                            <span id="active-student-indicator" class="text-xs font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full">Siswa #1</span>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="md:col-span-2">
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap Siswa</label>
@@ -189,7 +195,74 @@
                     </div>
                 </div>
 
-                <!-- TAB 2: DESAIN & WARNA -->
+                <!-- TAB 2: BULK SISWA (PENGELOLA MASSAL) -->
+                <div id="tab-content-bulk" class="hidden space-y-6">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">Daftar Pencetakan Massal</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Kelola seluruh data siswa dalam sesi cetak ini.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="addNewStudent()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-sm transition-all">
+                                <i class="fa-solid fa-plus"></i> Tambah Siswa
+                            </button>
+                            <button onclick="clearStudentList()" class="bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-bold text-xs px-3.5 py-2 rounded-xl transition-all">
+                                <i class="fa-solid fa-trash-can"></i> Kosongkan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Daftar Siswa -->
+                    <div class="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-[250px] overflow-y-auto custom-scroll">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase tracking-wider text-[10px] font-extrabold">
+                                    <th class="py-3 px-4 w-12 text-center">No</th>
+                                    <th class="py-3 px-4">Nama Siswa</th>
+                                    <th class="py-3 px-4">NISN</th>
+                                    <th class="py-3 px-4 w-28 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-student-table-body" class="text-xs font-semibold">
+                                <!-- Baris tabel di-generate dinamis lewat JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Salin Tempel Excel/CSV Importer -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3.5">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-file-excel text-emerald-600 text-sm"></i>
+                                Impor Cepat dari Excel / Google Sheets
+                            </h4>
+                            <span class="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded font-extrabold">Excel Friendly</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">
+                            Salin kolom tabel data dari Excel atau Sheets secara langsung (kolom harus berurutan: <strong class="text-slate-700">Nama, NISN, Tempat Lahir, Tanggal Lahir</strong>), lalu tempelkan di kotak bawah ini.
+                        </p>
+                        <textarea id="csv-paste-area" rows="3" placeholder="Contoh salinan:&#10;Andi Saputra	0123456711	SURABAYA	10 Maret 2012&#10;Siti Juwariyah	0123456712	MALANG	22 Juli 2012" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-300"></textarea>
+                        <div class="flex justify-end">
+                            <button onclick="processPasteImport()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4.5 py-2.5 rounded-xl flex items-center gap-1.5 shadow-sm transition-all">
+                                <i class="fa-solid fa-file-import"></i>
+                                Proses Tempel Data
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tombol Ekspor PDF Massal -->
+                    <div class="pt-2 border-t border-slate-100 flex flex-col items-center">
+                        <button onclick="downloadBulkPDF()" id="btn-bulk-print" class="w-full font-extrabold py-3.5 px-6 rounded-2xl shadow-lg hover:shadow-xl shadow-emerald-500/10 hover:scale-[1.01] active:scale-[0.99] transition-all bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2">
+                            <i id="bulk-download-icon" class="fa-solid fa-print text-lg"></i>
+                            <span id="bulk-download-text">Cetak Semua ke Satu PDF (Massal)</span>
+                        </button>
+                        <p class="text-[10px] text-slate-400 mt-2 text-center">
+                            Sistem akan merender dan menggabungkan semua kartu siswa ke dalam satu berkas PDF multi-halaman.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- TAB 3: DESAIN & WARNA -->
                 <div id="tab-content-desain" class="hidden space-y-6">
                     <!-- Preset Gelombang/Curve -->
                     <div>
@@ -257,14 +330,14 @@
                     </div>
                 </div>
 
-                <!-- TAB 3: PRESISI TATA LETAK (SLIDERS UNTUK MENGEPASI) -->
+                <!-- TAB 4: PRESISI TATA LETAK -->
                 <div id="tab-content-presisi" class="hidden space-y-6">
                     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 leading-relaxed mb-4">
                         <i class="fa-solid fa-info-circle mr-1.5 text-sm"></i>
                         Gunakan *slider* berikut untuk memindahkan, membesarkan, atau memposisikan komponen kartu pelajar agar pas dengan contoh asli Anda secara visual.
                     </div>
 
-                    <!-- Dimensi & Posisi Header & Logo (TAMBAHAN REVISI) -->
+                    <!-- Dimensi & Posisi Header & Logo -->
                     <div class="space-y-3">
                         <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b pb-1">
                             <i class="fa-solid fa-heading"></i> Dimensi Header & Logo Sekolah
@@ -362,6 +435,41 @@
                         </div>
                     </div>
 
+                    <!-- Tata Letak Kontak Sekolah (Kanan Bawah) -->
+                    <div class="space-y-3 pt-2">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b pb-1">
+                            <i class="fa-solid fa-address-book text-slate-500"></i> Tata Letak Kontak Sekolah (Kanan Bawah)
+                        </h4>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Geser Vertikal Kontak (Y)</span>
+                                <span id="val-contactTop" class="font-bold text-blue-600">0px</span>
+                            </div>
+                            <input type="range" id="slide-contactTop" min="-15" max="15" step="1" oninput="updateSliderState(this, 'contactTop')" class="w-full accent-blue-600">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Geser Horizontal Kontak (X)</span>
+                                <span id="val-contactRight" class="font-bold text-blue-600">0px</span>
+                            </div>
+                            <input type="range" id="slide-contactRight" min="-15" max="15" step="1" oninput="updateSliderState(this, 'contactRight')" class="w-full accent-blue-600">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Ukuran Huruf Detail Kontak</span>
+                                <span id="val-contactFontSize" class="font-bold text-blue-600">7px</span>
+                            </div>
+                            <input type="range" id="slide-contactFontSize" min="5" max="12" step="0.5" oninput="updateSliderState(this, 'contactFontSize')" class="w-full accent-blue-600">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-medium text-slate-600 mb-1">
+                                <span>Kerapatan Baris (Line Height)</span>
+                                <span id="val-contactLineHeight" class="font-bold text-blue-600">1.4</span>
+                            </div>
+                            <input type="range" id="slide-contactLineHeight" min="1.0" max="1.8" step="0.1" oninput="updateSliderState(this, 'contactLineHeight')" class="w-full accent-blue-600">
+                        </div>
+                    </div>
+
                     <!-- Ukuran Huruf (Font Size) -->
                     <div class="space-y-3 pt-2">
                         <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 border-b pb-1">
@@ -438,11 +546,11 @@
                                 <!-- Base Dark Navy -->
                                 <rect id="svg-base-color" width="330" height="180" fill="#153b75" />
                                 <!-- Diagonal Stripe 1 (Medium Blue) -->
-                                <path id="svg-stripe-1" d="M-50,180 L180,-50 L240,-50 L10,180 Z" fill="#0c4ea3" opacity="0.95" />
+                                <path id="svg-stripe-1" d="M100,-20 L280,160 L230,160 L50,-20 Z" fill="#0c4ea3" opacity="0.95" />
                                 <!-- Diagonal Stripe 2 (Bright Blue) -->
-                                <path id="svg-stripe-2" d="M20,180 L250,-50 L310,-50 L80,180 Z" fill="#0072bc" opacity="0.95" />
+                                <path id="svg-stripe-2" d="M180,-20 L360,160 L310,160 L130,-20 Z" fill="#0072bc" opacity="0.95" />
                                 <!-- Diagonal Stripe 3 (Cyan Accent on right) -->
-                                <path id="svg-stripe-3" d="M90,180 L320,-50 L380,-50 L150,180 Z" fill="#0096d6" opacity="0.95" />
+                                <path id="svg-stripe-3" d="M260,-20 L440,160 L390,160 L210,-20 Z" fill="#0096d6" opacity="0.95" />
                                 
                                 <!-- Soft Blue-gray under shadow gradient for the card background below the curve -->
                                 <path id="svg-wave-under" d="M-10,180 C80,115 250,115 340,180 L340,195 L-10,195 Z" fill="#f1f5f9" />
@@ -458,12 +566,21 @@
                             <div class="mr-2.5 shrink-0 flex items-center justify-center">
                                 <div id="logo-container" class="w-10 h-10 object-contain rounded-full border border-white/40 bg-white/10 flex items-center justify-center overflow-hidden">
                                     <img id="card-logo" src="" alt="Logo" class="w-full h-full object-contain hidden" crossOrigin="anonymous">
-                                    <svg id="default-logo" class="w-8 h-8" viewBox="0 0 50 50">
-                                        <circle cx="25" cy="25" r="23" fill="#eab308" stroke="#1e3a8a" stroke-width="2" />
-                                        <circle cx="25" cy="25" r="19" fill="#15803d" />
-                                        <path d="M22,12 L28,12 L28,38 L22,38 Z" fill="#eab308" />
-                                        <path d="M12,22 L38,22 L38,28 L12,28 Z" fill="#eab308" />
-                                        <text x="25" y="19" font-family="sans-serif" font-size="6" font-weight="bold" fill="#ffffff" text-anchor="middle">SMP</text>
+                                    <svg id="default-logo" class="w-8 h-8" viewBox="0 0 60 60">
+                                        <!-- Outer Shield/Circle -->
+                                        <circle cx="30" cy="30" r="28" fill="#1e3a8a" stroke="#ffffff" stroke-width="1.5" />
+                                        <!-- Yellow Ring -->
+                                        <circle cx="30" cy="30" r="24" fill="#eab308" />
+                                        <!-- Green Inner Circle -->
+                                        <circle cx="30" cy="30" r="18" fill="#15803d" />
+                                        <!-- White Cross -->
+                                        <path d="M27,16 L33,16 L33,44 L27,44 Z" fill="#ffffff" />
+                                        <path d="M16,27 L44,27 L44,33 L16,33 Z" fill="#ffffff" />
+                                        <!-- Inner Yellow Shield Circle -->
+                                        <circle cx="30" cy="30" r="8" fill="#eab308" />
+                                        <!-- Text emblem decoration -->
+                                        <text x="30" y="24" font-family="sans-serif" font-size="5.5" font-weight="900" fill="#ffffff" text-anchor="middle">SMPK</text>
+                                        <text x="30" y="39" font-family="sans-serif" font-size="5.5" font-weight="900" fill="#ffffff" text-anchor="middle">WIJANA</text>
                                     </svg>
                                 </div>
                             </div>
@@ -471,10 +588,11 @@
                             <!-- Pembatas Vertikal Putih -->
                             <div class="w-[1.5px] bg-white h-9 mr-2.5 opacity-80 self-center"></div>
                             
-                            <div class="flex-1 min-w-0 flex flex-col justify-center text-left leading-tight">
+                            <!-- Mengunci lebar container agar tidak kolaps/menyusut di html2canvas -->
+                            <div class="w-[220px] flex flex-col justify-center text-left leading-tight">
                                 <h1 class="text-[9px] font-bold tracking-[0.2em] uppercase m-0 text-white/95">Kartu Pelajar</h1>
-                                <h2 id="card-schoolName" class="text-[11.5px] font-extrabold uppercase m-0 text-white leading-tight truncate"></h2>
-                                <p id="card-schoolAddress" class="text-[6.5px] mt-0.5 leading-[1.3] text-white/90 break-words pr-1 line-clamp-2"></p>
+                                <h2 id="card-schoolName" class="text-[11.5px] font-extrabold uppercase m-0 text-white leading-tight break-words"></h2>
+                                <p id="card-schoolAddress" class="text-[6.5px] mt-0.5 leading-[1.3] text-white/90 break-words pr-1"></p>
                             </div>
                         </div>
 
@@ -527,17 +645,17 @@
                                     <canvas id="qr-canvas" width="45" height="45" style="width: 42px; height: 42px; display: block;"></canvas>
                                 </div>
                                 
-                                <!-- Kontak & Detail Sekolah -->
-                                <div class="text-right text-[7px] text-slate-500 font-semibold leading-[1.4] max-w-[185px]">
-                                    <p id="card-contactSchoolName" class="m-0 text-slate-800 font-extrabold truncate text-[7.5px]"></p>
+                                <!-- Kontak & Detail Sekolah (Lebar diperluas dan mode overflow-visible agar email tidak terpotong) -->
+                                <div id="card-contact-container" class="text-right text-[7px] text-slate-500 font-semibold leading-[1.4] max-w-[200px]">
+                                    <p id="card-contactSchoolName" class="m-0 text-slate-800 font-extrabold text-[7.5px] whitespace-nowrap overflow-visible"></p>
                                     <p class="m-0 font-bold text-slate-400">Contact Us</p>
-                                    <p id="card-contactNumber" class="m-0 font-semibold text-slate-600"></p>
-                                    <p id="card-contactEmail" class="m-0 font-semibold text-slate-600 truncate"></p>
+                                    <p id="card-contactNumber" class="m-0 font-semibold text-slate-600 whitespace-nowrap"></p>
+                                    <p id="card-contactEmail" class="m-0 font-semibold text-slate-600 whitespace-nowrap overflow-visible"></p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Pita NISN Orange Sesuai Referensi (Lebar Maksimal 68% dengan ujung siku vertikal) -->
+                        <!-- Pita NISN Orange Sesuai Referensi -->
                         <div id="orange-badge" class="absolute left-0 z-10 flex items-center justify-center py-1" 
                              style="background: #f59e2b; width: 68%; height: 26px; bottom: 18px;">
                             <span id="card-orangeIdText" class="text-white font-extrabold tracking-[0.25em] text-[12px] leading-none"></span>
@@ -561,6 +679,29 @@
     </div>
 
     <script>
+        // --- TOAST NOTIFICATION HELPER (Didefinisikan paling atas agar langsung siap diakses) ---
+        window.showToast = function(title, desc, iconClass) {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastTitle = document.getElementById('toast-title');
+            const toastDesc = document.getElementById('toast-desc');
+            
+            if (toast && toastIcon && toastTitle && toastDesc) {
+                toastIcon.className = `fa-solid ${iconClass}`;
+                toastTitle.innerText = title;
+                toastDesc.innerText = desc;
+                
+                toast.classList.remove('hidden');
+                toast.classList.add('flex', 'animate-fade-in');
+
+                // Hilangkan notifikasi setelah 3.5 detik
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                    toast.classList.remove('flex', 'animate-fade-in');
+                }, 3500);
+            }
+        };
+
         // Nilai Default Mengacu Pada Contoh Gambar {5893F58D-0DBA-493E-BF8E-7D70E8403B3F}.png
         const defaultState = {
             schoolName: 'SMPK WIJANA JOMBANG',
@@ -601,11 +742,45 @@
             fontId: 12.5,
             fontBirth: 9.5,
             barcodeScale: 1.8,
-            qrSize: 42
+            qrSize: 42,
+
+            // Penambahan Konfigurasi Presisi Kontak Kanan Bawah
+            contactTop: 0,
+            contactRight: 0,
+            contactFontSize: 7,
+            contactLineHeight: 1.4
         };
 
         // State Aktif
         let appState = { ...defaultState };
+
+        // Database In-Memory Daftar Siswa untuk Pencetakan Banyak/Massal (Bulk)
+        let studentList = [
+            {
+                studentName: 'ALEHAN DAMIAN P. N.',
+                studentId: '0123456789',
+                birthPlace: 'SLEMAN',
+                birthDate: '06 Agustus 2012',
+                photoUrl: ''
+            },
+            {
+                studentName: 'RIAN ADITAMA',
+                studentId: '0123456701',
+                birthPlace: 'JOMBANG',
+                birthDate: '15 Mei 2012',
+                photoUrl: ''
+            },
+            {
+                studentName: 'SITI AMINAH',
+                studentId: '0123456702',
+                birthPlace: 'BANDUNG',
+                birthDate: '20 April 2012',
+                photoUrl: ''
+            }
+        ];
+
+        // Indeks siswa yang sedang aktif diedit / di-preview
+        let selectedStudentIndex = 0;
 
         // Pilihan Struktur SVG Wave
         const wavePaths = {
@@ -661,6 +836,7 @@
                 'headerHeight', 'headerTop', 'logoSize', 'logoTop', 'logoLeft',
                 'photoWidth', 'photoHeight', 'photoTop', 
                 'badgeWidth', 'badgeHeight', 'badgeBottom', 
+                'contactTop', 'contactRight', 'contactFontSize', 'contactLineHeight',
                 'fontName', 'fontId', 'fontBirth', 
                 'barcodeScale', 'qrSize'
             ];
@@ -672,9 +848,9 @@
                     slider.value = appState[key];
                 }
                 if (valueText) {
-                    valueText.innerText = key.includes('Width') || key.includes('Height') || key.includes('Top') || key.includes('Bottom') || key.includes('Size') 
+                    valueText.innerText = key.includes('Width') || key.includes('Height') || key.includes('Top') || key.includes('Bottom') || key.includes('Size') || key.includes('Right') 
                         ? (key === 'badgeWidth' ? `${appState[key]}%` : `${appState[key]}px`)
-                        : (key.includes('font') || key.includes('logo') || key.includes('header') ? `${appState[key]}px` : appState[key]);
+                        : (key.includes('font') || key.includes('logo') || key.includes('header') || key.includes('contact') ? `${appState[key]}px` : appState[key]);
                 }
             });
 
@@ -685,13 +861,24 @@
             document.getElementById('val-colorBadge').innerText = appState.colorBadge.toUpperCase();
             document.getElementById('val-colorText').innerText = appState.colorText.toUpperCase();
 
+            // Setel indikator nomor siswa aktif
+            document.getElementById('active-student-indicator').innerText = `Siswa #${selectedStudentIndex + 1}`;
+
             updateCardUI();
+            renderStudentTable();
         }
 
         // Memperbarui State Saat Diketik/Dipilih
         function updateState(element, stateKey) {
             appState[stateKey] = element.value;
             
+            // Sinkronisasikan perubahan data ke list array siswa jika yang diubah adalah properti siswa
+            const studentFields = ['studentName', 'studentId', 'birthPlace', 'birthDate', 'photoUrl'];
+            if (studentFields.includes(stateKey) && studentList[selectedStudentIndex]) {
+                studentList[selectedStudentIndex][stateKey] = element.value;
+                renderStudentTable();
+            }
+
             // Perbarui label text warna jika yang diganti adalah warna
             if (stateKey.startsWith('color')) {
                 document.getElementById(`val-${stateKey}`).innerText = element.value.toUpperCase();
@@ -707,9 +894,9 @@
             
             const valueText = document.getElementById(`val-${stateKey}`);
             if (valueText) {
-                valueText.innerText = stateKey.includes('Width') || stateKey.includes('Height') || stateKey.includes('Top') || stateKey.includes('Bottom') || stateKey.includes('Size')
+                valueText.innerText = stateKey.includes('Width') || stateKey.includes('Height') || stateKey.includes('Top') || stateKey.includes('Bottom') || stateKey.includes('Size') || stateKey.includes('Right')
                     ? (stateKey === 'badgeWidth' ? `${val}%` : `${val}px`)
-                    : (stateKey.startsWith('font') || stateKey.startsWith('logo') || stateKey.startsWith('header') ? `${val}px` : val);
+                    : (stateKey.startsWith('font') || stateKey.startsWith('logo') || stateKey.startsWith('header') || stateKey.startsWith('contact') ? `${val}px` : val);
             }
             updateCardUI();
         }
@@ -722,7 +909,7 @@
             appState.colorBadge = defaultState.colorBadge;
             appState.colorText = defaultState.colorText;
             initFormValues();
-            showToast("Warna Direset", "Palet warna kembali ke model default SMPK Wijana.", "fa-palette text-blue-500");
+            window.showToast("Warna Direset", "Palet warna kembali ke model default SMPK Wijana.", "fa-palette text-blue-500");
         }
 
         // Reset Sliders Presisi Ke Posisi Ideal
@@ -738,13 +925,17 @@
             appState.badgeWidth = defaultState.badgeWidth;
             appState.badgeHeight = defaultState.badgeHeight;
             appState.badgeBottom = defaultState.badgeBottom;
+            appState.contactTop = defaultState.contactTop;
+            appState.contactRight = defaultState.contactRight;
+            appState.contactFontSize = defaultState.contactFontSize;
+            appState.contactLineHeight = defaultState.contactLineHeight;
             appState.fontName = defaultState.fontName;
             appState.fontId = defaultState.fontId;
             appState.fontBirth = defaultState.fontBirth;
             appState.barcodeScale = defaultState.barcodeScale;
             appState.qrSize = defaultState.qrSize;
             initFormValues();
-            showToast("Tata Letak Direset", "Posisi, ukuran foto, dan pita kembali presisi ideal.", "fa-sliders text-blue-500");
+            window.showToast("Tata Letak Direset", "Posisi, ukuran foto, dan pita kembali presisi ideal.", "fa-sliders text-blue-500");
         }
 
         // Penanganan Input Image (Base64)
@@ -754,8 +945,15 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     appState[stateKey] = e.target.result;
+                    
+                    // Sinkronisasi foto ke database list siswa
+                    if (stateKey === 'photoUrl' && studentList[selectedStudentIndex]) {
+                        studentList[selectedStudentIndex].photoUrl = e.target.result;
+                        renderStudentTable();
+                    }
+
                     updateCardUI();
-                    showToast("Gambar Terunggah", "Elemen visual kartu telah disinkronkan.", "fa-image text-emerald-500");
+                    window.showToast("Gambar Terunggah", "Elemen visual kartu telah disinkronkan.", "fa-image text-emerald-500");
                 };
                 reader.readAsDataURL(file);
             }
@@ -765,11 +963,13 @@
         function switchTab(tabId) {
             // Sembunyikan semua konten tab
             document.getElementById('tab-content-data').classList.add('hidden');
+            document.getElementById('tab-content-bulk').classList.add('hidden');
             document.getElementById('tab-content-desain').classList.add('hidden');
             document.getElementById('tab-content-presisi').classList.add('hidden');
 
             // Reset gaya tombol tab
             document.getElementById('tab-btn-data').className = "text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 px-1 transition-all";
+            document.getElementById('tab-btn-bulk').className = "text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 px-1 transition-all";
             document.getElementById('tab-btn-desain').className = "text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 px-1 transition-all";
             document.getElementById('tab-btn-presisi').className = "text-sm font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 px-1 transition-all";
 
@@ -782,7 +982,9 @@
         function updateCardUI() {
             // Sinkronisasi Nilai Konten Teks
             document.getElementById('card-schoolName').innerText = appState.schoolName;
-            document.getElementById('card-schoolAddress').innerText = `${appState.schoolAddress} ${appState.schoolCity}`;
+            
+            // Format 2 baris alamat secara presisi agar tidak lari dan berantakan
+            document.getElementById('card-schoolAddress').innerHTML = `${appState.schoolAddress}<br>${appState.schoolCity}`;
             
             const cardStudentName = document.getElementById('card-studentName');
             cardStudentName.innerText = appState.studentName;
@@ -802,7 +1004,7 @@
             document.getElementById('card-contactNumber').innerText = appState.contactNumber;
             document.getElementById('card-contactEmail').innerText = appState.contactEmail;
 
-            // Kustomisasi Tinggi Background Header & Padding Atas Konten (TAMBAHAN REVISI)
+            // Kustomisasi Tinggi Background Header & Padding Atas Konten
             const headerBgContainer = document.getElementById('header-bg-container');
             if (headerBgContainer) {
                 headerBgContainer.style.height = `${appState.headerHeight}px`;
@@ -812,7 +1014,7 @@
                 headerContent.style.paddingTop = `${appState.headerTop}px`;
             }
 
-            // Kustomisasi Ukuran & Posisi Logo (TAMBAHAN REVISI)
+            // Kustomisasi Ukuran & Posisi Logo
             const logoContainer = document.getElementById('logo-container');
             if (logoContainer) {
                 logoContainer.style.width = `${appState.logoSize}px`;
@@ -829,6 +1031,19 @@
             orangeBadge.style.bottom = `${appState.badgeBottom}px`;
             
             document.getElementById('card-orangeIdText').innerText = appState.studentId;
+
+            // Penerapan Presisi Kontak Kanan Bawah
+            const contactContainer = document.getElementById('card-contact-container');
+            if (contactContainer) {
+                contactContainer.style.marginTop = `${appState.contactTop}px`;
+                contactContainer.style.marginRight = `${appState.contactRight}px`;
+                contactContainer.style.fontSize = `${appState.contactFontSize}px`;
+                contactContainer.style.lineHeight = appState.contactLineHeight;
+            }
+            const contactSchoolName = document.getElementById('card-contactSchoolName');
+            if (contactSchoolName) {
+                contactSchoolName.style.fontSize = `${appState.contactFontSize + 0.5}px`;
+            }
 
             // Gaya Dinamis Foto Siswa
             const photoWrapper = document.getElementById('photo-wrapper-div');
@@ -911,22 +1126,226 @@
             }
         }
 
-        // Ekspor Data Kartu ke JSON lokal
+        // Membaca ulang dan merender daftar siswa ke elemen tabel bulk
+        function renderStudentTable() {
+            const tbody = document.getElementById('bulk-student-table-body');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (studentList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="py-6 text-center text-slate-400 font-semibold bg-slate-50/50">
+                            <i class="fa-solid fa-users-slash text-xl mb-1.5 block text-slate-300"></i>
+                            Daftar kosong. Tambahkan siswa secara manual atau tempel dari Excel.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            studentList.forEach((student, index) => {
+                const isSelected = index === selectedStudentIndex;
+                const row = document.createElement('tr');
+                row.className = `border-b border-slate-100 hover:bg-slate-50/80 cursor-pointer transition-all ${isSelected ? 'bg-blue-50/40 border-l-4 border-l-blue-600' : ''}`;
+                row.onclick = () => selectStudent(index);
+
+                row.innerHTML = `
+                    <td class="py-3 px-4 text-center text-slate-400 font-bold">${index + 1}</td>
+                    <td class="py-3 px-4 font-bold text-slate-700">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-8 rounded bg-blue-100 overflow-hidden shrink-0 border border-slate-200">
+                                ${student.photoUrl ? `<img src="${student.photoUrl}" class="w-full h-full object-cover">` : `<svg class="w-full h-full text-blue-400" viewBox="0 0 110 140" fill="currentColor"><rect width="110" height="140" fill="#cbd5e1"/><circle cx="55" cy="55" r="30" fill="#94a3b8"/><path d="M15,140 Q15,100 55,100 Q95,100 95,140 Z" fill="#94a3b8"/></svg>`}
+                            </div>
+                            <span class="truncate max-w-[150px] md:max-w-[180px]">${student.studentName || 'Tanpa Nama'}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-slate-500">${student.studentId || '-'}</td>
+                    <td class="py-3 px-4 text-center" onclick="event.stopPropagation()">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="selectStudent(${index})" class="p-1.5 hover:bg-blue-100 text-blue-600 rounded transition-all" title="Edit / Preview">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteStudent(${index})" class="p-1.5 hover:bg-rose-100 text-rose-600 rounded transition-all" title="Hapus">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Memilih siswa tertentu untuk diaktifkan dan di-preview pada formulir
+        function selectStudent(index) {
+            if (index < 0 || index >= studentList.length) return;
+            selectedStudentIndex = index;
+
+            // Muat data siswa ke formulir isian utama
+            const student = studentList[index];
+            appState.studentName = student.studentName;
+            appState.studentId = student.studentId;
+            appState.birthPlace = student.birthPlace;
+            appState.birthDate = student.birthDate;
+            appState.photoUrl = student.photoUrl;
+
+            initFormValues();
+        }
+
+        // Menambahkan satu siswa kosong baru ke dalam daftar
+        function addNewStudent() {
+            const newStudent = {
+                studentName: 'SISWA BARU',
+                studentId: (Math.floor(Math.random() * 9000000000) + 1000000000).toString(),
+                birthPlace: 'KOTA',
+                birthDate: '01 Januari 2012',
+                photoUrl: ''
+            };
+            studentList.push(newStudent);
+            selectedStudentIndex = studentList.length - 1;
+            
+            // Sync data form ke siswa baru
+            appState.studentName = newStudent.studentName;
+            appState.studentId = newStudent.studentId;
+            appState.birthPlace = newStudent.birthPlace;
+            appState.birthDate = newStudent.birthDate;
+            appState.photoUrl = newStudent.photoUrl;
+
+            initFormValues();
+            window.showToast("Siswa Ditambahkan", "Data siswa baru kosong berhasil dibuat.", "fa-plus text-blue-600");
+        }
+
+        // Menghapus siswa dari daftar
+        function deleteStudent(index) {
+            if (studentList.length <= 1) {
+                window.showToast("Gagal Menghapus", "Harus menyisakan minimal satu siswa dalam list.", "fa-triangle-exclamation text-rose-500");
+                return;
+            }
+
+            studentList.splice(index, 1);
+            if (selectedStudentIndex >= studentList.length) {
+                selectedStudentIndex = studentList.length - 1;
+            }
+            selectStudent(selectedStudentIndex);
+            window.showToast("Siswa Dihapus", "Siswa berhasil dikeluarkan dari daftar cetak.", "fa-trash text-rose-500");
+        }
+
+        // Mengosongkan seluruh data siswa dalam daftar
+        function clearStudentList() {
+            studentList = [];
+            addNewStudent(); // Selalu buat minimal satu siswa kosong agar sistem tidak error
+            window.showToast("List Direset", "Daftar siswa dikosongkan dan dibuat siswa baru.", "fa-trash-can text-rose-500");
+        }
+
+        // Memproses penempelan teks (paste) dari Excel / Google Sheets
+        function processPasteImport() {
+            const textarea = document.getElementById('csv-paste-area');
+            if (!textarea || !textarea.value.trim()) {
+                window.showToast("Gagal Import", "Silakan tempel data dari Excel terlebih dahulu.", "fa-circle-xmark text-rose-500");
+                return;
+            }
+
+            const rawText = textarea.value.trim();
+            const lines = rawText.split('\n');
+            let successCount = 0;
+
+            lines.forEach(line => {
+                // excel menyalin data dengan pemisah karakter Tab (\t), CSV menggunakan koma/titik koma
+                let columns = line.split('\t');
+                if (columns.length < 2) {
+                    columns = line.split(';');
+                }
+                if (columns.length < 2) {
+                    columns = line.split(',');
+                }
+
+                if (columns.length >= 2) {
+                    const studentName = columns[0].trim();
+                    const studentId = columns[1].trim();
+                    const birthPlace = columns[2] ? columns[2].trim() : 'KOTA';
+                    const birthDate = columns[3] ? columns[3].trim() : '01 Januari 2012';
+
+                    studentList.push({
+                        studentName: studentName.toUpperCase(),
+                        studentId: studentId,
+                        birthPlace: birthPlace.toUpperCase(),
+                        birthDate: birthDate,
+                        photoUrl: ''
+                    });
+                    successCount++;
+                }
+            });
+
+            if (successCount > 0) {
+                // Pilih siswa pertama dari daftar yang baru diimpor
+                selectedStudentIndex = studentList.length - successCount;
+                selectStudent(selectedStudentIndex);
+                textarea.value = ''; // Kosongkan text area setelah diproses
+                window.showToast("Import Sukses", `${successCount} siswa berhasil ditambahkan dari Excel!`, "fa-file-excel text-emerald-500");
+            } else {
+                window.showToast("Import Gagal", "Format data tidak sesuai, pastikan ada minimal Nama & NISN.", "fa-circle-xmark text-rose-500");
+            }
+        }
+
+        // Ekspor Data Kartu (Termasuk database list siswa) ke JSON lokal
         function exportData() {
             try {
-                const dataStr = JSON.stringify(appState, null, 2);
+                const bundleData = {
+                    schoolInfo: {
+                        schoolName: appState.schoolName,
+                        schoolAddress: appState.schoolAddress,
+                        schoolCity: appState.schoolCity,
+                        contactNumber: appState.contactNumber,
+                        contactEmail: appState.contactEmail,
+                        logoUrl: appState.logoUrl
+                    },
+                    designColors: {
+                        colorPrimary: appState.colorPrimary,
+                        colorAccent1: appState.colorAccent1,
+                        colorAccent2: appState.colorAccent2,
+                        colorBadge: appState.colorBadge,
+                        colorText: appState.colorText,
+                        wavePreset: appState.wavePreset
+                    },
+                    layoutSliders: {
+                        headerHeight: appState.headerHeight,
+                        headerTop: appState.headerTop,
+                        logoSize: appState.logoSize,
+                        logoTop: appState.logoTop,
+                        logoLeft: appState.logoLeft,
+                        photoWidth: appState.photoWidth,
+                        photoHeight: appState.photoHeight,
+                        photoTop: appState.photoTop,
+                        badgeWidth: appState.badgeWidth,
+                        badgeHeight: appState.badgeHeight,
+                        badgeBottom: appState.badgeBottom,
+                        contactTop: appState.contactTop,
+                        contactRight: appState.contactRight,
+                        contactFontSize: appState.contactFontSize,
+                        contactLineHeight: appState.contactLineHeight,
+                        fontName: appState.fontName,
+                        fontId: appState.fontId,
+                        fontBirth: appState.fontBirth,
+                        barcodeScale: appState.barcodeScale,
+                        qrSize: appState.qrSize
+                    },
+                    students: studentList
+                };
+
+                const dataStr = JSON.stringify(bundleData, null, 2);
                 const blob = new Blob([dataStr], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `kartu_pelajar_${appState.studentName.trim().replace(/\s+/g, '_') || 'siswa'}.json`;
+                link.download = `bundle_kartu_pelajar_${studentList.length}_siswa.json`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                showToast("Ekspor Sukses", "Berkas JSON berhasil disimpan.", "fa-file-export text-emerald-500");
+                window.showToast("Ekspor Sukses", "Berkas konfigurasi lengkap berhasil diunduh.", "fa-file-export text-emerald-500");
             } catch (err) {
-                showToast("Ekspor Gagal", "Terjadi kesalahan pembuatan JSON.", "fa-circle-xmark text-rose-500");
+                window.showToast("Ekspor Gagal", "Terjadi kesalahan pembuatan JSON.", "fa-circle-xmark text-rose-500");
             }
         }
 
@@ -943,18 +1362,42 @@
             reader.onload = function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    appState = { ...defaultState, ...imported };
+                    
+                    // Deteksi struktur data impor (baru bundle / lama single)
+                    if (imported.students && Array.isArray(imported.students)) {
+                        // Struktur Bundle Baru
+                        studentList = imported.students;
+                        appState = {
+                            ...defaultState,
+                            ...imported.schoolInfo,
+                            ...imported.designColors,
+                            ...imported.layoutSliders
+                        };
+                    } else {
+                        // Struktur Single Lama
+                        studentList = [{
+                            studentName: imported.studentName || 'SISWA BARU',
+                            studentId: imported.studentId || '00000000',
+                            birthPlace: imported.birthPlace || 'KOTA',
+                            birthDate: imported.birthDate || '01-01-2012',
+                            photoUrl: imported.photoUrl || ''
+                        }];
+                        appState = { ...defaultState, ...imported };
+                    }
+                    
+                    selectedStudentIndex = 0;
+                    selectStudent(0);
                     initFormValues();
-                    showToast("Impor Berhasil", "Data kartu diperbarui dari JSON.", "fa-file-import text-blue-500");
+                    window.showToast("Impor Berhasil", "Seluruh data sekolah dan daftar siswa diperbarui.", "fa-file-import text-blue-500");
                 } catch (err) {
-                    showToast("Impor Gagal", "Struktur JSON tidak dikenali.", "fa-triangle-exclamation text-rose-500");
+                    window.showToast("Impor Gagal", "Struktur JSON tidak dikenali.", "fa-triangle-exclamation text-rose-500");
                 }
             };
             reader.readAsText(file);
             event.target.value = '';
         }
 
-        // Pembuatan Dokumen PDF Sesuai Ukuran Fisik Murni (5.5 cm x 8.5 cm)
+        // Pembuatan Dokumen PDF Sesuai Ukuran Fisik Murni (5.5 cm x 8.5 cm) - Satu Siswa Terpilih
         async function downloadPDF() {
             const cardEl = document.getElementById('card-container');
             const downloadBtn = document.getElementById('btn-download');
@@ -971,6 +1414,11 @@
             dlText.innerText = "Mengekspor PDF...";
 
             try {
+                // MEMASTIKAN FONT KUSTOM SUDAH Selesai Dimuat 100% Sebelum Render PDF
+                if (document.fonts) {
+                    await document.fonts.ready;
+                }
+
                 // Skala 4x agar hasil cetak ultra tajam
                 const canvas = await window.html2canvas(cardEl, {
                     scale: 4,
@@ -991,10 +1439,10 @@
                 // Memasukkan gambar penuh satu halaman PDF tanpa sisa margin putih
                 pdf.addImage(imgData, 'PNG', 0, 0, 55, 85);
                 pdf.save(`Kartu_Pelajar_${appState.studentName.trim().replace(/\s+/g, '_')}.pdf`);
-                showToast("PDF Tersimpan", "Kartu pelajar siap cetak telah terunduh.", "fa-circle-check text-emerald-500");
+                window.showToast("PDF Tersimpan", "Kartu pelajar siap cetak telah terunduh.", "fa-circle-check text-emerald-500");
             } catch (error) {
                 console.error("Kesalahan pembuatan PDF:", error);
-                showToast("Unduh Gagal", "Kesalahan internal render berkas.", "fa-circle-exclamation text-rose-500");
+                window.showToast("Unduh Gagal", "Kesalahan internal render berkas.", "fa-circle-exclamation text-rose-500");
             } finally {
                 // Kembalikan Keadaan Tombol
                 downloadBtn.disabled = false;
@@ -1005,22 +1453,92 @@
             }
         }
 
-        // Toast Notification Helper
-        function showToast(title, desc, iconClass) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-icon').className = `fa-solid ${iconClass}`;
-            document.getElementById('toast-title').innerText = title;
-            document.getElementById('toast-desc').innerText = desc;
-            
-            toast.classList.remove('hidden');
-            toast.classList.add('flex', 'animate-fade-in');
+        // Pembuatan Dokumen PDF Massal Multi-Halaman untuk Seluruh Siswa yang Terdaftar
+        async function downloadBulkPDF() {
+            const cardEl = document.getElementById('card-container');
+            const bulkBtn = document.getElementById('btn-bulk-print');
+            const bulkIcon = document.getElementById('bulk-download-icon');
+            const bulkText = document.getElementById('bulk-download-text');
 
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3500);
+            if (!cardEl || studentList.length === 0) return;
+
+            // Simpan indeks siswa aktif yang sedang diedit agar nanti bisa dikembalikan ke awal
+            const originalIndex = selectedStudentIndex;
+
+            // Kunci interaksi tombol cetak massal
+            bulkBtn.disabled = true;
+            bulkBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+            bulkBtn.classList.add('bg-slate-400', 'cursor-not-allowed');
+            bulkIcon.className = "fa-solid fa-spinner animate-spin text-lg";
+
+            try {
+                // Pastikan font siap sebelum merender
+                if (document.fonts) {
+                    await document.fonts.ready;
+                }
+
+                // Buat wadah berkas dokumen PDF massal dengan ukuran kartu standar 55x85 mm
+                const pdf = new window.jspdf.jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: [55, 85]
+                });
+
+                // Looping render masing-masing siswa ke dalam halaman PDF
+                for (let i = 0; i < studentList.length; i++) {
+                    // Update progres pada teks tombol
+                    bulkText.innerText = `Memproses (${i + 1}/${studentList.length})...`;
+                    
+                    // Aktifkan data siswa pada UI untuk dirender
+                    selectStudent(i);
+                    
+                    // Beri jeda kecil (ticks) agar DOM dan canvas barcode/QR code sempat tergambar ulang penuh oleh engine
+                    await new Promise(resolve => setTimeout(resolve, 80));
+
+                    // Tangkap layout kartu menggunakan html2canvas dengan resolusi tajam
+                    const canvas = await window.html2canvas(cardEl, {
+                        scale: 4,
+                        useCORS: true,
+                        backgroundColor: null,
+                        logging: false
+                    });
+
+                    const imgData = canvas.toDataURL('image/png');
+
+                    // Halaman pertama sudah ada secara default di awal dokumen PDF, halaman selanjutnya ditambahkan dinamis
+                    if (i > 0) {
+                        pdf.addPage([55, 85], 'portrait');
+                    }
+
+                    // Tanamkan gambar kartu ke lembar halaman PDF aktif
+                    pdf.addImage(imgData, 'PNG', 0, 0, 55, 85);
+                }
+
+                // Simpan bundel lembar PDF massal siap cetak
+                pdf.save(`Bulk_Kartu_Pelajar_${studentList.length}_Siswa.pdf`);
+                window.showToast("PDF Massal Sukses", `${studentList.length} kartu siswa berhasil disatukan dalam satu file PDF.`, "fa-circle-check text-emerald-500");
+
+            } catch (err) {
+                console.error("Gagal cetak massal:", err);
+                window.showToast("Cetak Massal Gagal", "Kesalahan saat menggabungkan render halaman kartu.", "fa-circle-xmark text-rose-500");
+            } finally {
+                // Kembalikan ke siswa terpilih semula sebelum aksi klik cetak massal berjalan
+                selectStudent(originalIndex);
+
+                // Pulihkan tombol ekspor cetak massal kembali normal
+                bulkBtn.disabled = false;
+                bulkBtn.classList.remove('bg-slate-400', 'cursor-not-allowed');
+                bulkBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                bulkIcon.className = "fa-solid fa-print text-lg";
+                bulkText.innerText = "Cetak Semua ke Satu PDF (Massal)";
+            }
         }
 
+        // Window Onload Hook
         window.onload = function() {
+            // Setup awal siswa pertama
+            selectedStudentIndex = 0;
+            selectStudent(0);
             initFormValues();
         };
     </script>
