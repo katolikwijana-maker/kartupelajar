@@ -1,50 +1,345 @@
-import React, { useState, useRef, useEffect } from 'react';
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Kartu Pelajar - SMPK Wijana Jombang</title>
+    
+    <!-- Tailwind CSS untuk tata letak modern dan responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome untuk ikon menu yang menarik -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Pustaka Barcode Dinamis berdasarkan NISN -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- Pustaka QR Code Dinamis berdasarkan NISN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <!-- Pustaka Ekspor Gambar & PDF berkualitas tinggi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-// --- Default Data ---
-const defaultData = {
-    schoolName: 'SMPK WIJANA JOMBANG',
-    schoolAddress: 'Jl. KH. Wachid Hasyim 40, Kepanjen, Kec. Jombang,',
-    schoolCity: 'Kab. Jombang Prov. Jawa Timur',
-    studentName: 'ALEHAN DAMIAN P. N.',
-    studentId: '0123456789',
-    birthPlace: 'SLEMAN',
-    birthDate: '06 Agustus 2012',
-    contactNumber: '082245439915',
-    contactEmail: 'smpkwijana@gmail.com',
-    photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200', // Foto dummy default berkualitas bagus
-    logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=80' // Logo dummy default
-};
-
-// Helper untuk memuat library external secara dinamis
-const loadScript = (src) => {
-    return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-            resolve();
-            return;
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f3f4f6;
         }
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-};
+        /* Mengunci rasio kartu agar pas saat di-render ke PDF */
+        #card-container {
+            width: 350px;
+            height: 550px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 antialiased py-6 px-4 md:px-8">
 
-// --- Sub-komponen Kartu Pelajar ---
-const IdCard = ({ data, innerRef, isReady }) => {
-    const barcodeRef = useRef(null);
-    const qrRef = useRef(null);
-
-    useEffect(() => {
-        if (isReady) {
-            const idValue = data.studentId || "0000000000"; 
+    <div class="max-w-7xl mx-auto">
+        <!-- Header Aplikasi -->
+        <header class="mb-8 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center justify-center md:justify-start gap-3">
+                    <span class="p-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30">
+                        <i class="fa-solid fa-id-card"></i>
+                    </span>
+                    Generator Kartu Pelajar
+                </h1>
+                <p class="text-slate-500 mt-1 text-sm md:text-base">Buat, kelola, ekspor-impor data, dan unduh PDF kartu pelajar secara instan.</p>
+            </div>
             
-            // Generate Barcode
-            if (window.JsBarcode && barcodeRef.current) {
+            <!-- Tombol Ekspor / Impor Utama -->
+            <div class="flex items-center gap-3">
+                <button onclick="triggerImport()" class="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-sm">
+                    <i class="fa-solid fa-file-import text-blue-600"></i>
+                    Impor JSON
+                </button>
+                <button onclick="exportData()" class="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-sm">
+                    <i class="fa-solid fa-file-export text-emerald-600"></i>
+                    Ekspor JSON
+                </button>
+                <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importData(event)">
+            </div>
+        </header>
+
+        <!-- Kotak Notifikasi / Error -->
+        <div id="error-toast" class="hidden mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex justify-between items-center animate-fade-in shadow-sm">
+            <div class="flex items-center gap-2 text-sm font-medium">
+                <i class="fa-solid fa-circle-exclamation text-rose-500 text-lg"></i>
+                <span id="error-message">Terjadi kesalahan pada aplikasi.</span>
+            </div>
+            <button onclick="hideError()" class="text-rose-400 hover:text-rose-700 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Layout Utama: Form Kiri & Preview Kanan -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- SISI KIRI: Formulir Input -->
+            <div class="lg:col-span-7 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6">
+                
+                <!-- Bagian 1: Identitas Sekolah -->
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2 border-b pb-2">
+                        <i class="fa-solid fa-school text-blue-600"></i>
+                        Informasi Sekolah
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Nama Sekolah</label>
+                            <input type="text" id="input-schoolName" oninput="updateState(this, 'schoolName')" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Alamat Sekolah (Baris 1)</label>
+                            <input type="text" id="input-schoolAddress" oninput="updateState(this, 'schoolAddress')" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Kota & Provinsi (Baris 2)</label>
+                            <input type="text" id="input-schoolCity" oninput="updateState(this, 'schoolCity')" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Logo Sekolah</label>
+                            <input type="file" accept="image/*" onchange="handleImageUpload(event, 'logoUrl')" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bagian 2: Identitas Siswa -->
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2 border-b pb-2">
+                        <i class="fa-solid fa-user-graduated text-blue-600"></i>
+                        Data Diri Siswa
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Nama Lengkap Siswa</label>
+                            <input type="text" id="input-studentName" oninput="updateState(this, 'studentName')" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Nomor Induk / NISN</label>
+                            <input type="text" id="input-studentId" oninput="updateState(this, 'studentId')" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Foto Siswa</label>
+                            <input type="file" accept="image/*" onchange="handleImageUpload(event, 'photoUrl')" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Tempat Lahir</label>
+                            <input type="text" id="input-birthPlace" oninput="updateState(this, 'birthPlace')" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Tanggal Lahir</label>
+                            <input type="text" id="input-birthDate" oninput="updateState(this, 'birthDate')" placeholder="Contoh: 06 Agustus 2012" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bagian 3: Hubungi Sekolah (Kaki Kartu) -->
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center gap-2 border-b pb-2">
+                        <i class="fa-solid fa-address-book text-blue-600"></i>
+                        Kontak Sekolah (Bagian Belakang/Kanan Bawah)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">No. Telepon Sekolah</label>
+                            <input type="text" id="input-contactNumber" oninput="updateState(this, 'contactNumber')" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Email Resmi Sekolah</label>
+                            <input type="text" id="input-contactEmail" oninput="updateState(this, 'contactEmail')" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SISI KANAN: Preview Kartu Pelajar & Tombol Unduh -->
+            <div class="lg:col-span-5 flex flex-col items-center">
+                <h2 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Pratinjau Kartu Pelajar
+                </h2>
+
+                <!-- Area Kartu Pelajar -->
+                <div class="p-6 bg-slate-200 rounded-3xl border border-slate-300 shadow-inner flex justify-center items-center w-full max-w-[400px]">
+                    
+                    <div id="card-container" class="relative overflow-hidden bg-white flex flex-col shadow-2xl select-none">
+                        
+                        <!-- Header Background & Gelombang Melengkung SVG Sempurna -->
+                        <div class="absolute top-0 left-0 w-full h-[210px] z-0 overflow-hidden">
+                            <!-- Background Biru Aksen Terang (Sisi Kanan Belakang) -->
+                            <div class="absolute top-0 right-0 w-[60%] h-[160px] bg-[#0084c8]" style="clip-path: polygon(100% 0, 100% 100%, 0 100%);"></div>
+                            
+                            <!-- Background Biru Utama Gelap (Sisi Kiri Depan) -->
+                            <div class="absolute top-0 left-0 w-full h-[140px] bg-[#2b477b]" style="clip-path: polygon(0 0, 100% 0, 100% 60%, 0 100%);"></div>
+                            
+                            <!-- Lengkungan Sempurna Putih (Pembatas antara Header & Konten) -->
+                            <svg class="absolute bottom-[-1px] w-full" style="height: 45px;" viewBox="0 0 100 20" preserveAspectRatio="none">
+                                <path d="M0,20 L0,15 Q50,-5 100,15 L100,20 Z" fill="#ffffff" />
+                                <path d="M0,15 Q50,-5 100,15" fill="none" stroke="white" stroke-width="1.5" /> 
+                            </svg>
+                        </div>
+
+                        <!-- Konten Atas Header -->
+                        <div class="relative z-10 flex px-4 pt-5 pb-2 text-white items-center">
+                            <div class="mr-2.5 shrink-0">
+                                <img id="card-logo" src="" alt="Logo" class="w-11 h-11 object-contain rounded-full border border-white/40 bg-white/10" crossOrigin="anonymous">
+                            </div>
+                            
+                            <!-- Garis Pembatas Vertikal Putih -->
+                            <div class="w-[1.5px] bg-white h-10 mr-2.5 opacity-80 self-center"></div>
+                            
+                            <div class="flex-1 min-w-0 flex flex-col justify-center text-left leading-tight">
+                                <h1 class="text-[9px] font-bold tracking-wider uppercase m-0 text-white/95">Kartu Pelajar</h1>
+                                <h2 id="card-schoolName" class="text-[11px] font-extrabold uppercase m-0 text-white leading-tight truncate"></h2>
+                                <p id="card-schoolAddress" class="text-[7.5px] mt-0.5 leading-tight text-white/90 break-words pr-2 line-clamp-2"></p>
+                            </div>
+                        </div>
+
+                        <!-- Area Foto Siswa (Sesuai Referensi Gambar Utama) -->
+                        <div class="relative z-10 flex justify-center mt-7">
+                            <div class="p-1 bg-white rounded-xl shadow-md border border-slate-100">
+                                <img id="card-photo" src="" alt="Siswa" class="w-[105px] h-[135px] object-cover rounded-lg" crossOrigin="anonymous">
+                            </div>
+                        </div>
+
+                        <!-- Area Teks Detail Siswa -->
+                        <div class="relative z-10 text-center px-4 mt-3">
+                            <h2 id="card-studentName" class="text-[17px] font-bold text-[#1f4e79] uppercase tracking-wide leading-tight mb-0.5"></h2>
+                            <p id="card-studentIdText" class="text-sm text-slate-700 font-semibold m-0 tracking-widest"></p>
+                            <p id="card-studentBirth" class="text-[11px] text-slate-800 m-0 mt-0.5 uppercase font-medium"></p>
+                        </div>
+
+                        <!-- Area Kode Batang (Barcode) & QR Code -->
+                        <div class="relative z-10 flex flex-col px-5 mt-3.5">
+                            <!-- Barcode SVG Asli (Berjalan Sempurna Berdasarkan NISN) -->
+                            <div class="flex justify-center mb-2 h-[26px]">
+                                <canvas id="barcode-canvas" style="max-height: 26px; max-width: 280px;"></canvas>
+                            </div>
+
+                            <div class="flex justify-between items-end mt-1">
+                                <!-- QR Code Asli Dinamis -->
+                                <div class="bg-white p-1 rounded border border-slate-200 shadow-sm shrink-0">
+                                    <canvas id="qr-canvas" width="55" height="55" style="width: 50px; height: 50px; display: block;"></canvas>
+                                </div>
+                                
+                                <!-- Kontak & Info Sekolah -->
+                                <div class="text-right text-[7.5px] text-slate-600 font-semibold leading-normal max-w-[200px]">
+                                    <p id="card-contactSchoolName" class="m-0 text-slate-800 font-extrabold truncate"></p>
+                                    <p class="m-0 font-normal">Contact Us</p>
+                                    <p id="card-contactNumber" class="m-0 font-normal"></p>
+                                    <p id="card-contactEmail" class="m-0 font-normal truncate"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pita Orange Berdasarkan NISN (Dibatasi Lebarnya Menjadi 68%) -->
+                        <div id="orange-badge" class="absolute bottom-5 left-0 z-10 flex items-center justify-start py-1.5 pl-6" 
+                             style="background: #f59e2b; width: 68%; border-top-right-radius: 6px; border-bottom-right-radius: 6px;">
+                            <span id="card-orangeIdText" class="text-white font-extrabold tracking-[0.2em] text-[13px] leading-none"></span>
+                        </div>
+
+                        <!-- Garis Hitam Tipis di Paling Bawah -->
+                        <div class="absolute bottom-2 left-0 right-0 h-[2.5px] bg-slate-800 z-10 w-[90%] mx-auto"></div>
+
+                    </div>
+
+                </div>
+
+                <!-- Tombol Cetak PDF Beresolusi Tinggi -->
+                <button onclick="downloadPDF()" id="btn-download" class="mt-6 font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl shadow-blue-500/20 hover:scale-[1.03] active:scale-[0.97] transition-all bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+                    <i id="download-icon" class="fa-solid fa-file-pdf"></i>
+                    <span id="download-text">Download PDF Kartu</span>
+                </button>
+                <p class="text-xs text-slate-500 mt-4 text-center max-w-xs leading-relaxed">
+                    *Foto & logo dapat disesuaikan langsung. Sistem barcode dan QR Code akan selalu sinkron dengan Nomor Induk/NISN siswa secara real-time.
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Data Default Sesuai Contoh Gambar Anda {E4F90123-E38E-4B99-95F0-41CD0C92A129}.png
+        const defaultState = {
+            schoolName: 'SMPK WIJANA JOMBANG',
+            schoolAddress: 'Jl. KH. Wachid Hasyim 40, Kepanjen, Kec. Jombang,',
+            schoolCity: 'Kab. Jombang Prov. Jawa Timur',
+            studentName: 'ALEHAN DAMIAN P. N.',
+            studentId: '0123456789',
+            birthPlace: 'SLEMAN',
+            birthDate: '06 Agustus 2012',
+            contactNumber: '082245439915',
+            contactEmail: 'smpkwijana@gmail.com',
+            photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200', // Foto dummy default berkualitas bagus
+            logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&q=80&w=80' // Logo dummy default
+        };
+
+        // Objek State yang Aktif
+        let appState = { ...defaultState };
+
+        // Mengisi nilai form saat halaman pertama kali dimuat
+        function initFormValues() {
+            for (const key in appState) {
+                const inputElement = document.getElementById(`input-${key}`);
+                if (inputElement && inputElement.type !== 'file') {
+                    inputElement.value = appState[key];
+                }
+            }
+            updateCardUI();
+        }
+
+        // Fungsi memperbarui State dari Input Teks
+        function updateState(element, stateKey) {
+            appState[stateKey] = element.value;
+            updateCardUI();
+        }
+
+        // Penanganan Unggahan Gambar (Foto Siswa / Logo) ke format Base64 agar awet diekspor
+        function handleImageUpload(event, stateKey) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    appState[stateKey] = e.target.result;
+                    updateCardUI();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Fungsi Utama untuk me-render data state ke dalam Elemen Kartu Pelajar
+        function updateCardUI() {
+            // Pembaruan teks
+            document.getElementById('card-schoolName').innerText = appState.schoolName;
+            document.getElementById('card-schoolAddress').innerText = `${appState.schoolAddress} ${appState.schoolCity}`;
+            document.getElementById('card-studentName').innerText = appState.studentName;
+            document.getElementById('card-studentIdText').innerText = appState.studentId;
+            document.getElementById('card-studentBirth').innerText = `${appState.birthPlace}, ${appState.birthDate}`;
+            
+            // Kontak Kaki Kartu
+            document.getElementById('card-contactSchoolName').innerText = appState.schoolName;
+            document.getElementById('card-contactNumber').innerText = appState.contactNumber;
+            document.getElementById('card-contactEmail').innerText = appState.contactEmail;
+
+            // Pita Orange NISN (Membatasi agar tidak meluap penuh, presisi dengan {48EBEE01-AF4B-4C65-A09D-5F11E6A5D215}.png)
+            document.getElementById('card-orangeIdText').innerText = appState.studentId;
+
+            // Pembaruan elemen gambar
+            const logoEl = document.getElementById('card-logo');
+            logoEl.src = appState.logoUrl;
+
+            const photoEl = document.getElementById('card-photo');
+            photoEl.src = appState.photoUrl;
+
+            // Generate Barcode Dinamis menggunakan NISN yang Aktif
+            const idVal = appState.studentId || "0000000000";
+            const barcodeCanvas = document.getElementById('barcode-canvas');
+            if (window.JsBarcode && barcodeCanvas) {
                 try {
-                    window.JsBarcode(barcodeRef.current, idValue, {
+                    window.JsBarcode(barcodeCanvas, idVal, {
                         format: "CODE128",
-                        displayValue: false, // Sembunyikan teks di bawah barcode
+                        displayValue: false,
                         height: 30,
                         width: 2,
                         margin: 0,
@@ -52,400 +347,150 @@ const IdCard = ({ data, innerRef, isReady }) => {
                         lineColor: "#000"
                     });
                 } catch (e) {
-                    console.error("Error generate barcode:", e);
+                    console.error("Gagal membuat barcode:", e);
                 }
             }
-            
-            // Generate QR Code
-            if (window.QRious && qrRef.current) {
+
+            // Generate QR Code Dinamis menggunakan NISN yang Aktif
+            const qrCanvas = document.getElementById('qr-canvas');
+            if (window.QRious && qrCanvas) {
                 try {
                     new window.QRious({
-                        element: qrRef.current,
-                        value: idValue,
-                        size: 60,
+                        element: qrCanvas,
+                        value: idVal,
+                        size: 110,
                         background: 'white',
                         foreground: 'black'
                     });
                 } catch (e) {
-                    console.error("Error generate QR Code:", e);
+                    console.error("Gagal membuat QR Code:", e);
                 }
             }
         }
-    }, [isReady, data.studentId]);
 
-    return (
-        <div 
-            ref={innerRef}
-            className="relative overflow-hidden bg-gray-50 flex flex-col font-sans text-gray-800 shadow-xl border border-gray-300"
-            style={{
-                width: '350px',
-                height: '550px',
-                borderRadius: '12px'
-            }}
-        >
-            {/* Header Background Shapes */}
-            <div className="absolute top-0 w-full h-[220px]" style={{ zIndex: 0 }}>
-                {/* Dark Blue Triangle/Polygon */}
-                <div 
-                    className="absolute top-0 w-full"
-                    style={{
-                        height: '180px',
-                        background: '#2b477b', // Biru gelap dari gambar referensi
-                        clipPath: 'polygon(0 0, 100% 0, 100% 60%, 0 100%)'
-                    }}
-                ></div>
-                {/* Light Blue Accent */}
-                <div 
-                    className="absolute right-0"
-                    style={{
-                        top: '50px',
-                        width: '60%',
-                        height: '130px',
-                        background: '#0084c8', // Biru terang aksen
-                        clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
-                        zIndex: 1
-                    }}
-                ></div>
-                
-                {/* Wavy white separator (menggunakan lengkungan SVG murni) */}
-                <svg className="absolute bottom-[-1px] w-full" style={{ zIndex: 2, height: '40px' }} viewBox="0 0 100 20" preserveAspectRatio="none">
-                    <path d="M0,20 L0,15 Q50,-5 100,15 L100,20 Z" fill="#f9fafb" />
-                    <path d="M0,15 Q50,-5 100,15" fill="none" stroke="white" strokeWidth="1.5" /> 
-                </svg>
-            </div>
-
-            {/* Header Content */}
-            <div className="relative z-10 flex px-4 pt-6 pb-2 text-white">
-                <div className="mr-3 mt-1 shrink-0">
-                    <img src={data.logoUrl} alt="Logo" className="w-12 h-12 object-contain rounded-full border-2 border-white/40 bg-white/10" crossOrigin="anonymous" />
-                </div>
-                {/* Vertical Divider */}
-                <div className="w-[1.5px] bg-white h-12 mr-3 opacity-80 self-center"></div>
-                
-                <div className="flex-1 min-w-0 flex flex-col justify-center text-left">
-                    <h1 className="text-[10px] font-bold tracking-wide uppercase m-0 leading-tight">Kartu Pelajar</h1>
-                    <h2 className="text-xs font-bold uppercase m-0 leading-tight truncate">{data.schoolName}</h2>
-                    <p className="text-[7.5px] mt-0.5 leading-tight opacity-90 break-words pr-2">
-                        {data.schoolAddress} {data.schoolCity}
-                    </p>
-                </div>
-            </div>
-
-            {/* Photo Area */}
-            <div className="relative z-10 flex justify-center mt-6">
-                <div className="p-1 bg-white rounded-xl shadow-md border border-gray-100">
-                    <img 
-                        src={data.photoUrl} 
-                        alt="Siswa" 
-                        className="w-[110px] h-[140px] object-cover rounded-lg"
-                        crossOrigin="anonymous"
-                    />
-                </div>
-            </div>
-
-            {/* Student Info Area */}
-            <div className="relative z-10 text-center px-4 mt-4">
-                <h2 className="text-[18px] font-bold text-[#1f4e79] uppercase tracking-wide leading-tight mb-0.5">
-                    {data.studentName}
-                </h2>
-                <p className="text-base text-gray-700 font-semibold m-0 tracking-widest">{data.studentId}</p>
-                <p className="text-xs text-gray-800 m-0 mt-0.5 uppercase font-medium">
-                    {data.birthPlace}, {data.birthDate}
-                </p>
-            </div>
-
-            {/* Barcode & QR Code Section */}
-            <div className="relative z-10 flex flex-col px-6 mt-4">
-                {/* Dynamic Barcode */}
-                <div className="flex justify-center mb-2.5 h-[30px]">
-                    {isReady ? (
-                        <canvas ref={barcodeRef} style={{ maxHeight: '30px', maxWidth: '280px' }}></canvas>
-                    ) : (
-                        <div className="w-[240px] h-[30px] bg-gray-200 animate-pulse rounded"></div>
-                    )}
-                </div>
-
-                <div className="flex justify-between items-center mt-1">
-                    {/* Dynamic QR Code */}
-                    <div className="bg-white p-1 rounded border border-gray-200 shadow-sm">
-                        {isReady ? (
-                            <canvas ref={qrRef} width="60" height="60" style={{ width: '55px', height: '55px' }}></canvas>
-                        ) : (
-                            <div className="w-[55px] h-[55px] bg-gray-200 animate-pulse"></div>
-                        )}
-                    </div>
-                    
-                    {/* School Contact Info */}
-                    <div className="text-right text-[8px] text-gray-600 font-bold leading-normal">
-                        <p className="m-0 text-gray-800 font-extrabold">{data.schoolName}</p>
-                        <p className="m-0 font-normal">Contact Us</p>
-                        <p className="m-0 font-normal">{data.contactNumber}</p>
-                        <p className="m-0 font-normal">{data.contactEmail}</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bottom Orange Bar (Disesuaikan panjangnya sesuai revisi agar tidak memanjang penuh) */}
-            <div 
-                className="absolute bottom-5 left-0 z-10 flex items-center justify-start py-1.5 pl-6" 
-                style={{ 
-                    background: '#f59e2b',
-                    width: '68%', 
-                    borderTopRightRadius: '6px',
-                    borderBottomRightRadius: '6px'
-                }}
-            >
-                <span className="text-white font-extrabold tracking-[0.2em] text-[14px]">
-                    {data.studentId}
-                </span>
-            </div>
-
-            {/* Thin black border at very bottom */}
-            <div className="absolute bottom-2 left-0 right-0 h-[2.5px] bg-gray-800 z-10 w-[90%] mx-auto"></div>
-        </div>
-    );
-};
-
-// --- Main App Component ---
-const App = () => {
-    const [cardData, setCardData] = useState(defaultData);
-    const cardRef = useRef(null);
-    const fileInputRef = useRef(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [errorMsg, setErrorMsg] = useState("");
-    const [scriptsLoaded, setScriptsLoaded] = useState(false);
-
-    // Load libraries on mount
-    useEffect(() => {
-        Promise.all([
-            loadScript('https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js'),
-            loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js'),
-            loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
-            loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-        ]).then(() => {
-            setScriptsLoaded(true);
-        }).catch(err => {
-            console.error("Gagal memuat library eksternal:", err);
-            setErrorMsg("Gagal memuat komponen pembuat barcode/PDF. Silakan muat ulang halaman.");
-        });
-    }, []);
-
-    // --- Handlers ---
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setCardData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleImageUpload = (e, type) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCardData(prev => ({ ...prev, [type]: reader.result }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const exportData = () => {
-        const dataStr = JSON.stringify(cardData, null, 2);
-        const blob = new Blob([dataStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `data_kartu_${cardData.studentName.replace(/\s+/g, '_') || 'pelajar'}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleFileImport = (e) => {
-        setErrorMsg("");
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
+        // Fungsi Mengekspor Data Kartu ke File JSON lokal
+        function exportData() {
             try {
-                const importedData = JSON.parse(event.target.result);
-                setCardData(prev => ({ ...prev, ...importedData }));
-            } catch (error) {
-                setErrorMsg("Format file tidak valid. Harap unggah file JSON yang sesuai.");
+                const dataStr = JSON.stringify(appState, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `kartu_pelajar_${appState.studentName.trim().replace(/\s+/g, '_') || 'siswa'}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                showError("Gagal mengekspor data JSON. Silakan coba kembali.");
             }
-        };
-        reader.readAsText(file);
-        e.target.value = null; // reset input
-    };
-
-    const triggerImport = () => {
-        if (fileInputRef.current) {
-            fileInputRef.current.click();
         }
-    };
 
-    const downloadPDF = async () => {
-        const element = cardRef.current;
-        if (!element || !window.html2canvas || !window.jspdf) {
-            setErrorMsg("Library pembuatan dokumen belum siap. Silakan tunggu sebentar.");
-            return;
+        // Memicu jendela pemilih file saat tombol Import diklik
+        function triggerImport() {
+            document.getElementById('import-file-input').click();
         }
-        
-        setIsGenerating(true);
-        setErrorMsg("");
 
-        try {
-            const canvas = await window.html2canvas(element, {
-                scale: 2, // Meningkatkan resolusi render
-                useCORS: true,
-                backgroundColor: null
-            });
+        // Membaca file JSON yang diimpor, memperbarui state, serta memperbarui seluruh tampilan form & preview
+        function importData(event) {
+            hideError();
+            const file = event.target.files[0];
+            if (!file) return;
 
-            const imgData = canvas.toDataURL('image/png');
-            
-            // Ukuran standar kartu (CR80) dalam format mm (~ 54mm x 86mm)
-            const pdf = new window.jspdf.jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: [55, 86]
-            });
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    
+                    // Memastikan objek JSON yang diunggah valid dan memiliki kunci dasar
+                    const keys = Object.keys(defaultState);
+                    const isValid = keys.some(key => key in imported);
+                    
+                    if (!isValid) {
+                        showError("Format file JSON tidak cocok untuk data kartu pelajar.");
+                        return;
+                    }
 
-            pdf.addImage(imgData, 'PNG', 0, 0, 55, 86);
-            pdf.save(`Kartu_Pelajar_${cardData.studentName.replace(/\s+/g, '_')}.pdf`);
-        } catch (error) {
-            console.error("Gagal men-generate PDF:", error);
-            setErrorMsg("Gagal membuat PDF. Pastikan gambar yang diunggah valid.");
-        } finally {
-            setIsGenerating(false);
+                    // Gabungkan data impor dengan default jika ada isian yang kosong
+                    appState = { ...defaultState, ...imported };
+                    
+                    // Refresh Form & Kartu
+                    initFormValues();
+                } catch (err) {
+                    showError("File JSON rusak atau tidak dapat dibaca dengan benar.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Mengatur ulang nilai input agar bisa mengunggah file yang sama lagi
         }
-    };
 
-    return (
-        <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans flex flex-col">
-            <h1 className="text-3xl font-extrabold text-center mb-8 text-gray-800 tracking-tight">
-                Generator Kartu Pelajar
-            </h1>
-            
-            <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto w-full">
+        // Fungsi Mengonversi HTML Kartu Menjadi Gambar PNG lalu diekspor menjadi dokumen PDF berukuran standar
+        async function downloadPDF() {
+            const cardEl = document.getElementById('card-container');
+            const downloadBtn = document.getElementById('btn-download');
+            const dlIcon = document.getElementById('download-icon');
+            const dlText = document.getElementById('download-text');
+
+            if (!cardEl) return;
+            hideError();
+
+            // Ubah tampilan tombol ke mode Loading
+            downloadBtn.disabled = true;
+            downloadBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            downloadBtn.classList.add('bg-slate-400', 'cursor-not-allowed');
+            dlIcon.className = "fa-solid fa-spinner animate-spin";
+            dlText.innerText = "Membuat PDF...";
+
+            try {
+                // Konversi elemen kartu ke Canvas dengan skala resolusi 2.5x agar hasil cetak jernih
+                const canvas = await window.html2canvas(cardEl, {
+                    scale: 2.5,
+                    useCORS: true,
+                    backgroundColor: null,
+                    logging: false
+                });
+
+                const imgData = canvas.toDataURL('image/png');
                 
-                {/* --- Form Section --- */}
-                <div className="flex-1 bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 mb-4 gap-2">
-                        <h2 className="text-xl font-semibold text-gray-700">Data Siswa & Sekolah</h2>
-                        <div className="flex gap-2">
-                            <button onClick={triggerImport} className="text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded-lg border border-gray-300 transition flex items-center gap-1.5">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                                Import Data
-                            </button>
-                            <button onClick={exportData} className="text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded-lg border border-gray-300 transition flex items-center gap-1.5">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                Export Data
-                            </button>
-                            <input type="file" accept=".json" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileImport} />
-                        </div>
-                    </div>
+                // Ukuran kartu standar internasional CR80 (86mm x 54mm)
+                const pdf = new window.jspdf.jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: [55, 86]
+                });
 
-                    {errorMsg && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex justify-between items-center">
-                            <span>{errorMsg}</span>
-                            <button onClick={() => setErrorMsg("")} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none">×</button>
-                        </div>
-                    )}
-                    
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Sekolah</label>
-                                <input type="text" name="schoolName" value={cardData.schoolName} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Logo Sekolah</label>
-                                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logoUrl')} className="w-full p-1 border border-gray-300 rounded-lg text-xs text-gray-500 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                            </div>
-                        </div>
+                // Gambar dimasukkan penuh ke lembar dokumen PDF
+                pdf.addImage(imgData, 'PNG', 0, 0, 55, 86);
+                pdf.save(`Kartu_Pelajar_${appState.studentName.trim().replace(/\s+/g, '_')}.pdf`);
+            } catch (error) {
+                console.error("Kesalahan pembuatan dokumen PDF:", error);
+                showError("Gagal menyimpan dokumen PDF. Pastikan format gambar yang Anda unggah valid.");
+            } finally {
+                // Mengembalikan tampilan tombol ke mode normal
+                downloadBtn.disabled = false;
+                downloadBtn.classList.remove('bg-slate-400', 'cursor-not-allowed');
+                downloadBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                dlIcon.className = "fa-solid fa-file-pdf";
+                dlText.innerText = "Download PDF Kartu";
+            }
+        }
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Sekolah (Baris 1)</label>
-                            <input type="text" name="schoolAddress" value={cardData.schoolAddress} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Sekolah (Baris 2 / Kota / Provinsi)</label>
-                            <input type="text" name="schoolCity" value={cardData.schoolCity} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                        </div>
+        // Fungsi menampilkan notifikasi error
+        function showError(msg) {
+            document.getElementById('error-message').innerText = msg;
+            document.getElementById('error-toast').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-                        <hr className="my-4 border-gray-200" />
+        // Fungsi menyembunyikan notifikasi error
+        function hideError() {
+            document.getElementById('error-toast').classList.add('hidden');
+        }
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap Siswa</label>
-                            <input type="text" name="studentName" value={cardData.studentName} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Induk / NISN</label>
-                            <input type="text" name="studentId" value={cardData.studentId} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tempat Lahir</label>
-                                <input type="text" name="birthPlace" value={cardData.birthPlace} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Lahir</label>
-                                <input type="text" name="birthDate" value={cardData.birthDate} onChange={handleInputChange} placeholder="ex: 06 Agustus 2012" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Foto Siswa</label>
-                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'photoUrl')} className="w-full p-1 border border-gray-300 rounded-lg text-xs text-gray-500 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                        </div>
-
-                         <hr className="my-4 border-gray-200" />
-                         
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">No. Telp / HP Sekolah</label>
-                                <input type="text" name="contactNumber" value={cardData.contactNumber} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Sekolah</label>
-                                <input type="text" name="contactEmail" value={cardData.contactEmail} onChange={handleInputChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* --- Preview Section --- */}
-                <div className="flex-1 flex flex-col items-center">
-                    <h2 className="text-xl font-semibold mb-4 text-gray-700 w-full text-center">Preview Kartu</h2>
-                    
-                    {/* The Card */}
-                    <div className="mb-6 flex justify-center w-full overflow-auto p-4 bg-gray-200 rounded-2xl border border-gray-300">
-                        <IdCard data={cardData} innerRef={cardRef} isReady={scriptsLoaded} />
-                    </div>
-
-                    <button 
-                        onClick={downloadPDF}
-                        disabled={isGenerating || !scriptsLoaded}
-                        className={`font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95 flex items-center gap-2 text-white
-                            ${(isGenerating || !scriptsLoaded) ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-blue-600 hover:bg-blue-700'}`}
-                    >
-                        {isGenerating ? (
-                            <span>Memproses PDF...</span>
-                        ) : (
-                            <>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                Download PDF
-                            </>
-                        )}
-                    </button>
-                    <p className="text-xs text-gray-500 mt-3.5 text-center max-w-sm leading-relaxed">
-                        *Pastikan foto berorientasi tegak (portrait 3x4). Barcode & QR code dihasilkan otomatis berdasarkan isian NISN.
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-export default App;
+        // Jalankan inisialisasi awal saat halaman termuat sepenuhnya
+        window.onload = function() {
+            initFormValues();
+        };
+    </script>
+</body>
+</html>
